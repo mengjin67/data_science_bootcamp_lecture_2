@@ -1,0 +1,6 @@
+.playground/
+.venv/
+.local/
+
+.env
+.log
