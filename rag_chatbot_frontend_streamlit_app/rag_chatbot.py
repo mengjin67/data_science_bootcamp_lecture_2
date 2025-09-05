@@ -1,7 +1,10 @@
+import sys
 import streamlit as st
 import tempfile
 import os
 from dotenv import load_dotenv
+
+sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), "..")))
 from rag_chatbot_backend_business_logic.rag_chatbot_business_logic import (
     load_pdf,
     split_documents,
@@ -40,16 +43,41 @@ if uploaded_file:
 
             # Step 3: QA interface
             st.subheader("Ask a question about your PDF:")
-            user_query = st.text_input("Enter your question")
-            if user_query:
+            user_query = st.text_input(
+                "Ask a question about your PDF:",
+                label_visibility="collapsed",
+                value="Enter your question",
+            )
+            if "response" not in st.session_state:
+                st.session_state["response"] = None
+            if st.button("Submit Question"):
                 with st.spinner("Retrieving answer..."):
                     response = run_qa_chain(qa_chain, user_query)
-                st.markdown("**Answer:**")
-                st.write(response["result"])
-                st.markdown("**Source Documents:**")
-                for i, doc in enumerate(response["source_documents"]):
-                    st.write(f"Document {i+1}:")
-                    st.write(doc.page_content)
+                st.session_state["response"] = response
+                st.session_state["show_sources"] = False
+            if st.session_state["response"]:
+                st.subheader("Answer:")
+                st.text_area(
+                    "Answer:",
+                    st.session_state["response"]["result"],
+                    label_visibility="collapsed",
+                    height=100,
+                    disabled=False,
+                    key="answer_area",
+                )
+                if "show_sources" not in st.session_state:
+                    st.session_state["show_sources"] = False
+                if st.button("Show/Hide Source Document Chunks"):
+                    st.session_state["show_sources"] = not st.session_state[
+                        "show_sources"
+                    ]
+                if st.session_state["show_sources"]:
+                    # st.markdown("**Source Document Chunks:**")
+                    for i, doc in enumerate(
+                        st.session_state["response"]["source_documents"]
+                    ):
+                        st.write(f"**Document Chunk {i+1}:**")
+                        st.write(doc.page_content)
         except Exception as e:
             st.error(f"Error processing file: {e}")
 else:
